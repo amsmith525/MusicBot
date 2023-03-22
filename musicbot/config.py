@@ -19,15 +19,16 @@ class Config:
         config = configparser.ConfigParser(interpolation=None)
         config.read(config_file, encoding='utf-8')
 
-        confsections = {"Credentials", "Permissions", "Chat", "MusicBot"}.difference(config.sections())
-        if confsections:
+        if confsections := {
+            "Credentials",
+            "Permissions",
+            "Chat",
+            "MusicBot",
+        }.difference(config.sections()):
             raise HelpfulError(
                 "One or more required config sections are missing.",
-                "Fix your config.  Each [Section] should be on its own line with "
-                "nothing else on it.  The following sections are missing: {}".format(
-                    ', '.join(['[%s]' % s for s in confsections])
-                ),
-                preface="An error has occured parsing the config:\n"
+                f"Fix your config.  Each [Section] should be on its own line with nothing else on it.  The following sections are missing: {', '.join([f'[{s}]' for s in confsections])}",
+                preface="An error has occured parsing the config:\n",
             )
 
         self._confpreface = "An error has occured reading the config:\n"
@@ -97,9 +98,8 @@ class Config:
         """Returns all config keys as a list"""
         sects = dict(conf.items())
         keys = []
-        for k in sects:
-            s = sects[k]
-            keys += [key for key in s.keys()]
+        for s in sects.values():
+            keys += list(s.keys())
         return keys
 
     def check_changes(self, conf):
@@ -148,74 +148,84 @@ class Config:
             if self.owner_id.isdigit():
                 if int(self.owner_id) < 10000:
                     raise HelpfulError(
-                        "An invalid OwnerID was set: {}".format(self.owner_id),
-
+                        f"An invalid OwnerID was set: {self.owner_id}",
                         "Correct your OwnerID. The ID should be just a number, approximately "
                         "18 characters long, or 'auto'. If you don't know what your ID is, read the "
                         "instructions in the options or ask in the help server.",
-                        preface=self._confpreface
+                        preface=self._confpreface,
                     )
                 self.owner_id = int(self.owner_id)
 
-            elif self.owner_id == 'auto':
-                pass # defer to async check
-
-            else:
+            elif self.owner_id != 'auto':
                 self.owner_id = None
 
         if not self.owner_id:
             raise HelpfulError(
                 "No OwnerID was set.",
-                "Please set the OwnerID option in {}".format(self.config_file),
-                preface=self._confpreface
+                f"Please set the OwnerID option in {self.config_file}",
+                preface=self._confpreface,
             )
 
         if self.bot_exception_ids:
             try:
-                self.bot_exception_ids = set(int(x) for x in self.bot_exception_ids.replace(',', ' ').split())
+                self.bot_exception_ids = {
+                    int(x)
+                    for x in self.bot_exception_ids.replace(',', ' ').split()
+                }
             except:
                 log.warning("BotExceptionIDs data is invalid, will ignore all bots")
                 self.bot_exception_ids = set()
 
         if self.bound_channels:
             try:
-                self.bound_channels = set(x for x in self.bound_channels.replace(',', ' ').split() if x)
+                self.bound_channels = {
+                    x for x in self.bound_channels.replace(',', ' ').split() if x
+                }
             except:
                 log.warning("BindToChannels data is invalid, will not bind to any channels")
                 self.bound_channels = set()
 
         if self.autojoin_channels:
             try:
-                self.autojoin_channels = set(x for x in self.autojoin_channels.replace(',', ' ').split() if x)
+                self.autojoin_channels = {
+                    x
+                    for x in self.autojoin_channels.replace(',', ' ').split()
+                    if x
+                }
             except:
                 log.warning("AutojoinChannels data is invalid, will not autojoin any channels")
                 self.autojoin_channels = set()
 
         if self.nowplaying_channels:
             try:
-                self.nowplaying_channels = set(int(x) for x in self.nowplaying_channels.replace(',', ' ').split() if x)
+                self.nowplaying_channels = {
+                    int(x)
+                    for x in self.nowplaying_channels.replace(',', ' ').split()
+                    if x
+                }
             except:
                 log.warning("NowPlayingChannels data is invalid, will use the default behavior for all servers")
                 self.autojoin_channels = set()
 
-        self._spotify = False
-        if self.spotify_clientid and self.spotify_clientsecret:
-            self._spotify = True
-
+        self._spotify = bool(self.spotify_clientid and self.spotify_clientsecret)
         self.delete_invoking = self.delete_invoking and self.delete_messages
 
-        self.bound_channels = set(int(item) for item in self.bound_channels)
+        self.bound_channels = {int(item) for item in self.bound_channels}
 
-        self.autojoin_channels = set(int(item) for item in self.autojoin_channels)
+        self.autojoin_channels = {int(item) for item in self.autojoin_channels}
 
         ap_path, ap_name = os.path.split(self.auto_playlist_file)
         apn_name, apn_ext = os.path.splitext(ap_name)
-        self.auto_playlist_removed_file = os.path.join(ap_path, apn_name + '_removed' + apn_ext)
+        self.auto_playlist_removed_file = os.path.join(
+            ap_path, f'{apn_name}_removed{apn_ext}'
+        )
 
         if hasattr(logging, self.debug_level.upper()):
             self.debug_level = getattr(logging, self.debug_level.upper())
         else:
-            log.warning("Invalid DebugLevel option \"{}\" given, falling back to INFO".format(self.debug_level_str))
+            log.warning(
+                f'Invalid DebugLevel option \"{self.debug_level_str}\" given, falling back to INFO'
+            )
             self.debug_level = logging.INFO
             self.debug_level_str = 'INFO'
 
@@ -227,7 +237,7 @@ class Config:
     def create_empty_file_ifnoexist(self, path):
         if not os.path.isfile(path):
             open(path, 'a').close()
-            log.warning('Creating %s' % path)
+            log.warning(f'Creating {path}')
 
     # TODO: Add save function for future editing of options with commands
     #       Maybe add warnings about fields missing from the config file
@@ -267,11 +277,13 @@ class Config:
         config = configparser.ConfigParser(interpolation=None)
 
         if not os.path.isfile(self.config_file):
-            if os.path.isfile(self.config_file + '.ini'):
-                shutil.move(self.config_file + '.ini', self.config_file)
-                log.info("Moving {0} to {1}, you should probably turn file extensions on.".format(
-                    self.config_file + '.ini', self.config_file
-                ))
+            if os.path.isfile(f'{self.config_file}.ini'):
+                shutil.move(f'{self.config_file}.ini', self.config_file)
+                log.info(
+                    "Moving {0} to {1}, you should probably turn file extensions on.".format(
+                        f'{self.config_file}.ini', self.config_file
+                    )
+                )
 
             elif os.path.isfile('config/example_options.ini'):
                 shutil.copy('config/example_options.ini', self.config_file)
@@ -305,7 +317,10 @@ class Config:
 
             except Exception as e:
                 print(flush=True)
-                log.critical("Unable to copy config/example_options.ini to {}".format(self.config_file), exc_info=e)
+                log.critical(
+                    f"Unable to copy config/example_options.ini to {self.config_file}",
+                    exc_info=e,
+                )
                 sys.exit(2)
 
     def find_autoplaylist(self):

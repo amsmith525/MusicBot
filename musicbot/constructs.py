@@ -63,10 +63,7 @@ class AnimatedResponse(Response):
 
 class Serializer(json.JSONEncoder):
     def default(self, o):
-        if hasattr(o, '__json__'):
-            return o.__json__()
-
-        return super().default(o)
+        return o.__json__() if hasattr(o, '__json__') else super().default(o)
 
     @classmethod
     def deserialize(cls, data):
@@ -84,17 +81,11 @@ class Serializer(json.JSONEncoder):
     def _get_vars(cls, func):
         # log.debug("Getting vars for %s", func)
         params = inspect.signature(func).parameters.copy()
-        args = {}
-        # log.debug("Got %s", params)
-
-        for name, param in params.items():
-            # log.debug("Checking arg %s, type %s", name, param.kind)
-            if param.kind is param.POSITIONAL_OR_KEYWORD and param.default is None:
-                # log.debug("Using var %s", name)
-                args[name] = _get_variable(name)
-                # log.debug("Collected var for arg '%s': %s", name, args[name])
-
-        return args
+        return {
+            name: _get_variable(name)
+            for name, param in params.items()
+            if param.kind is param.POSITIONAL_OR_KEYWORD and param.default is None
+        }
 
 
 class Serializable:
@@ -110,7 +101,7 @@ class Serializable:
     # Perhaps convert this into some sort of decorator
     @staticmethod
     def _bad(arg):
-        raise TypeError('Argument "%s" must not be None' % arg)
+        raise TypeError(f'Argument "{arg}" must not be None')
 
     def serialize(self, *, cls=Serializer, **kwargs):
         return json.dumps(self, cls=cls, **kwargs)

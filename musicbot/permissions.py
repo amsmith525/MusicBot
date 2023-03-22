@@ -67,7 +67,9 @@ class Permissions:
 
             except Exception as e:
                 traceback.print_exc()
-                raise RuntimeError("Unable to copy config/example_permissions.ini to {}: {}".format(config_file, e))
+                raise RuntimeError(
+                    f"Unable to copy config/example_permissions.ini to {config_file}: {e}"
+                )
 
         self.default_group = PermissionGroup('Default', self.config['Default'])
         self.groups = set()
@@ -75,16 +77,16 @@ class Permissions:
         for section in self.config.sections():
             if section != 'Owner (auto)':
                 self.groups.add(PermissionGroup(section, self.config[section]))
-                
+
         if self.config.has_section('Owner (auto)'):
             owner_group = PermissionGroup('Owner (auto)', self.config['Owner (auto)'], fallback=Permissive)
-            
+
         else:
             log.info("[Owner (auto)] section not found, falling back to permissive default")
             # Create a fake section to fallback onto the default permissive values to grant to the owner
             # noinspection PyTypeChecker
             owner_group = PermissionGroup("Owner (auto)", configparser.SectionProxy(self.config, "Owner (auto)"), fallback=Permissive)
-            
+
         if hasattr(grant_all, '__iter__'):
             owner_group.user_list = set(grant_all)
 
@@ -166,10 +168,10 @@ class PermissionGroup:
             self.ignore_non_voice = set(self.ignore_non_voice.lower().split())
 
         if self.granted_to_roles:
-            self.granted_to_roles = set([int(x) for x in self.granted_to_roles.split()])
+            self.granted_to_roles = {int(x) for x in self.granted_to_roles.split()}
 
         if self.user_list:
-            self.user_list = set([int(x) for x in self.user_list.split()])
+            self.user_list = {int(x) for x in self.user_list.split()}
 
         if self.extractors:
             self.extractors = set(self.extractors.split())
@@ -223,7 +225,7 @@ class PermissionGroup:
 
 
     def __repr__(self):
-        return "<PermissionGroup: %s>" % self.name
+        return f"<PermissionGroup: {self.name}>"
 
     def __str__(self):
-        return "<PermissionGroup: %s: %s>" % (self.name, self.__dict__)
+        return f"<PermissionGroup: {self.name}: {self.__dict__}>"

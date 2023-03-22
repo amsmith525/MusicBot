@@ -30,10 +30,7 @@ class BasePlaylistEntry(Serializable):
 
     @property
     def is_downloaded(self):
-        if self._is_downloading:
-            return False
-
-        return bool(self.filename)
+        return False if self._is_downloading else bool(self.filename)
 
     async def _download(self):
         raise NotImplementedError
@@ -133,13 +130,17 @@ class URLPlaylistEntry(BasePlaylistEntry):
                 # int() it because persistent queue from pre-rewrite days saved ids as strings
                 meta['channel'] = playlist.bot.get_channel(int(data['meta']['channel']['id']))
                 if not meta['channel']:
-                    log.warning('Cannot find channel in an entry loaded from persistent queue. Chennel id: {}'.format(data['meta']['channel']['id']))
+                    log.warning(
+                        f"Cannot find channel in an entry loaded from persistent queue. Chennel id: {data['meta']['channel']['id']}"
+                    )
                     meta.pop('channel')
                 elif 'author' in data['meta']:
                     # int() it because persistent queue from pre-rewrite days saved ids as strings
                     meta['author'] = meta['channel'].guild.get_member(int(data['meta']['author']['id']))
                     if not meta['author']:
-                        log.warning('Cannot find author in an entry loaded from persistent queue. Author id: {}'.format(data['meta']['author']['id']))
+                        log.warning(
+                            f"Cannot find author in an entry loaded from persistent queue. Author id: {data['meta']['author']['id']}"
+                        )
                         meta.pop('author')
 
             entry = cls(playlist, url, title, duration, expected_filename, **meta)
@@ -147,7 +148,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
 
             return entry
         except Exception as e:
-            log.error("Could not load {}".format(cls.__name__), exc_info=e)
+            log.error(f"Could not load {cls.__name__}", exc_info=e)
 
     # noinspection PyTypeChecker
     async def _download(self):
@@ -204,22 +205,21 @@ class URLPlaylistEntry(BasePlaylistEntry):
 
                 if expected_fname_base in ldir:
                     self.filename = os.path.join(self.download_folder, expected_fname_base)
-                    log.info("Download cached: {}".format(self.url))
+                    log.info(f"Download cached: {self.url}")
 
                 elif expected_fname_noex in flistdir:
-                    log.info("Download cached (different extension): {}".format(self.url))
+                    log.info(f"Download cached (different extension): {self.url}")
                     self.filename = os.path.join(self.download_folder, ldir[flistdir.index(expected_fname_noex)])
-                    log.debug("Expected {}, got {}".format(
-                        self.expected_filename.rsplit('.', 1)[-1],
-                        self.filename.rsplit('.', 1)[-1]
-                    ))
+                    log.debug(
+                        f"Expected {self.expected_filename.rsplit('.', 1)[-1]}, got {self.filename.rsplit('.', 1)[-1]}"
+                    )
                 else:
                     await self._really_download()
 
             if self.playlist.bot.config.use_experimental_equalization:
                 try:
                     mean, maximum = await self.get_mean_volume(self.filename)
-                    aoptions = '-af "volume={}dB"'.format((maximum * -1))
+                    aoptions = f'-af "volume={maximum * -1}dB"'
                 except Exception as e:
                     log.error('There as a problem with working out EQ, likely caused by a strange installation of FFmpeg. '
                               'This has not impacted the ability for the bot to work, but will mean your tracks will not be equalised.')
@@ -249,7 +249,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
         def is_exe(fpath):
             found = os.path.isfile(fpath) and os.access(fpath, os.X_OK)
             if not found and sys.platform == 'win32':
-                fpath = fpath + ".exe"
+                fpath = f"{fpath}.exe"
                 found = os.path.isfile(fpath) and os.access(fpath, os.X_OK)
             return found
 
@@ -271,15 +271,14 @@ class URLPlaylistEntry(BasePlaylistEntry):
         cmd = '"' + self.get('ffmpeg') + '" -i "' + input_file + '" -af "volumedetect" -f null /dev/null'
         output = await self.run_command(cmd)
         output = output.decode("utf-8")
-        # print('----', output)
-        mean_volume_matches = re.findall(r"mean_volume: ([\-\d\.]+) dB", output)
-        if (mean_volume_matches):
+        if mean_volume_matches := re.findall(
+            r"mean_volume: ([\-\d\.]+) dB", output
+        ):
             mean_volume = float(mean_volume_matches[0])
         else:
             mean_volume = float(0)
 
-        max_volume_matches = re.findall(r"max_volume: ([\-\d\.]+) dB", output)
-        if (max_volume_matches):
+        if max_volume_matches := re.findall(r"max_volume: ([\-\d\.]+) dB", output):
             max_volume = float(max_volume_matches[0])
         else:
             max_volume = float(0)
@@ -289,7 +288,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
 
     # noinspection PyShadowingBuiltins
     async def _really_download(self, *, hash=False):
-        log.info("Download started: {}".format(self.url))
+        log.info(f"Download started: {self.url}")
 
         retry = True
         while retry:
@@ -299,7 +298,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
             except Exception as e:
                 raise ExtractionError(e)
 
-        log.info("Download complete: {}".format(self.url))
+        log.info(f"Download complete: {self.url}")
 
         if result is None:
             log.critical("YTDL has failed, everyone panic")
@@ -376,7 +375,7 @@ class StreamPlaylistEntry(BasePlaylistEntry):
 
             return entry
         except Exception as e:
-            log.error("Could not load {}".format(cls.__name__), exc_info=e)
+            log.error(f"Could not load {cls.__name__}", exc_info=e)
 
     # noinspection PyMethodOverriding
     async def _download(self, *, fallback=False):

@@ -34,7 +34,7 @@ class Aliases:
             except:
                 raise HelpfulError(
                     "Failed to parse aliases file.",
-                    "Ensure your {} is a valid json file and restart the bot.".format(str(self.aliases_file))
+                    f"Ensure your {str(self.aliases_file)} is a valid json file and restart the bot.",
                 )
 
         # construct
@@ -42,7 +42,7 @@ class Aliases:
             if not isinstance(cmd, str) or not isinstance(aliases, list):
                 raise HelpfulError(
                     "Failed to parse aliases file.",
-                    "See documents and config {} properly!".format(str(self.aliases_file))
+                    f"See documents and config {str(self.aliases_file)} properly!",
                 )
             self.aliases.update({alias.lower(): cmd.lower() for alias in aliases})
     
@@ -53,7 +53,7 @@ class Aliases:
         supposed to be called from bot.on_message
         """
         ret = self.aliases.get(arg)
-        return ret if ret else ''
+        return ret or ''
             
 class AliasesDefault:
     aliases_file = 'config/aliases.json'

@@ -15,16 +15,16 @@ class Spotify:
     def __init__(self, client_id, client_secret, aiosession=None, loop=None):
         self.client_id = client_id
         self.client_secret = client_secret
-        self.aiosession = aiosession if aiosession else aiohttp.ClientSession()
-        self.loop = loop if loop else asyncio.get_event_loop()
+        self.aiosession = aiosession or aiohttp.ClientSession()
+        self.loop = loop or asyncio.get_event_loop()
 
         self.token = None
 
         self.loop.run_until_complete(self.get_token())  # validate token
 
     def _make_token_auth(self, client_id, client_secret):
-        auth_header = base64.b64encode((client_id + ':' + client_secret).encode('ascii'))
-        return {'Authorization': 'Basic %s' % auth_header.decode('ascii')}
+        auth_header = base64.b64encode(f'{client_id}:{client_secret}'.encode('ascii'))
+        return {'Authorization': f"Basic {auth_header.decode('ascii')}"}
 
     async def get_track(self, uri):
         """Get a track's info from its URI"""
@@ -83,5 +83,6 @@ class Spotify:
         """Obtains a token from Spotify and returns it"""
         payload = {'grant_type': 'client_credentials'}
         headers = self._make_token_auth(self.client_id, self.client_secret)
-        r = await self.make_post(self.OAUTH_TOKEN_URL, payload=payload, headers=headers)
-        return r
+        return await self.make_post(
+            self.OAUTH_TOKEN_URL, payload=payload, headers=headers
+        )

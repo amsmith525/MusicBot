@@ -5,11 +5,7 @@ import os
 import subprocess
 import sys
 
-update = False
-for arg in sys.argv[1:]:
-    if arg == "-update":
-        update = True
-
+update = any(arg == "-update" for arg in sys.argv[1:])
 if update:
     subprocess.run([sys.executable, '-m', 'pip', 'install', '-U', '-r', 'requirements.txt'])
 

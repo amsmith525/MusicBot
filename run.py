@@ -54,37 +54,34 @@ class PIP(object):
         import pip
 
         args = list(args)
-        check_output = kwargs.pop('check_output', False)
-
-        if check_output:
-            from io import StringIO
-
-            out = StringIO()
-            sys.stdout = out
-
-            try:
-                pip.main(args)
-            except:
-                traceback.print_exc()
-            finally:
-                sys.stdout = sys.__stdout__
-
-                out.seek(0)
-                pipdata = out.read()
-                out.close()
-
-                print(pipdata)
-                return pipdata
-        else:
+        if not (check_output := kwargs.pop('check_output', False)):
             return pip.main(args)
+        from io import StringIO
+
+        out = StringIO()
+        sys.stdout = out
+
+        try:
+            pip.main(args)
+        except:
+            traceback.print_exc()
+        finally:
+            sys.stdout = sys.__stdout__
+
+            out.seek(0)
+            pipdata = out.read()
+            out.close()
+
+            print(pipdata)
+            return pipdata
 
     @classmethod
     def run_install(cls, cmd, quiet=False, check_output=False):
-        return cls.run("install %s%s" % ('-q ' if quiet else '', cmd), check_output)
+        return cls.run(f"install {'-q ' if quiet else ''}{cmd}", check_output)
 
     @classmethod
     def run_show(cls, cmd, check_output=False):
-        return cls.run("show %s" % cmd, check_output)
+        return cls.run(f"show {cmd}", check_output)
 
     @classmethod
     def works(cls):
@@ -245,7 +242,7 @@ def req_ensure_py3():
                 pyexec(pycom, 'run.py')
 
                 # I hope ^ works
-                os.system('start cmd /k %s run.py' % pycom)
+                os.system(f'start cmd /k {pycom} run.py')
                 sys.exit(0)
 
         else:
@@ -328,7 +325,7 @@ def req_ensure_folders():
 
 def opt_check_disk_space(warnlimit_mb=200):
     if disk_usage('.').free < warnlimit_mb*1024*2:
-        log.warning("Less than %sMB of free space remains on this device" % warnlimit_mb)
+        log.warning(f"Less than {warnlimit_mb}MB of free space remains on this device")
 
 
 #################################################
@@ -385,12 +382,11 @@ def main():
                 log.exception("Error starting bot")
                 log.info("Attempting to install dependencies...")
 
-                err = PIP.run_install('--upgrade -r requirements.txt')
-
-                if err: # TODO: add the specific error check back as not to always tell users to sudo it
+                if err := PIP.run_install('--upgrade -r requirements.txt'):
                     print()
-                    log.critical("You may need to %s to install dependencies." %
-                                 ['use sudo', 'run as admin'][sys.platform.startswith('win')])
+                    log.critical(
+                        f"You may need to {['use sudo', 'run as admin'][sys.platform.startswith('win')]} to install dependencies."
+                    )
                     break
                 else:
                     print()
@@ -411,7 +407,6 @@ def main():
 
                 elif e.__class__.__name__ == "RestartSignal":
                     loops = 0
-                    pass
             else:
                 log.exception("Error starting bot")
 
@@ -425,9 +420,8 @@ def main():
             asyncio.set_event_loop(asyncio.new_event_loop())
             loops += 1
 
-        sleeptime = min(loops * 2, max_wait_time)
-        if sleeptime:
-            log.info("Restarting in {} seconds...".format(loops*2))
+        if sleeptime := min(loops * 2, max_wait_time):
+            log.info(f"Restarting in {loops * 2} seconds...")
             time.sleep(sleeptime)
 
     print()

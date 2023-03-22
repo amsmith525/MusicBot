@@ -61,27 +61,26 @@ class Downloader:
             If `on_error` is passed and an exception is raised, the exception will be caught and passed to
             on_error as an argument.
         """
-        if callable(on_error):
-            try:
-                return await loop.run_in_executor(self.thread_pool, functools.partial(self.unsafe_ytdl.extract_info, *args, **kwargs))
-
-            except Exception as e:
-
-                # (youtube_dl.utils.ExtractorError, youtube_dl.utils.DownloadError)
-                # I hope I don't have to deal with ContentTooShortError's
-                if asyncio.iscoroutinefunction(on_error):
-                    asyncio.ensure_future(on_error(e), loop=loop)
-
-                elif asyncio.iscoroutine(on_error):
-                    asyncio.ensure_future(on_error, loop=loop)
-
-                else:
-                    loop.call_soon_threadsafe(on_error, e)
-
-                if retry_on_error:
-                    return await self.safe_extract_info(loop, *args, **kwargs)
-        else:
+        if not callable(on_error):
             return await loop.run_in_executor(self.thread_pool, functools.partial(self.unsafe_ytdl.extract_info, *args, **kwargs))
+        try:
+            return await loop.run_in_executor(self.thread_pool, functools.partial(self.unsafe_ytdl.extract_info, *args, **kwargs))
+
+        except Exception as e:
+
+            # (youtube_dl.utils.ExtractorError, youtube_dl.utils.DownloadError)
+            # I hope I don't have to deal with ContentTooShortError's
+            if asyncio.iscoroutinefunction(on_error):
+                asyncio.ensure_future(on_error(e), loop=loop)
+
+            elif asyncio.iscoroutine(on_error):
+                asyncio.ensure_future(on_error, loop=loop)
+
+            else:
+                loop.call_soon_threadsafe(on_error, e)
+
+            if retry_on_error:
+                return await self.safe_extract_info(loop, *args, **kwargs)
 
     async def safe_extract_info(self, loop, *args, **kwargs):
         return await loop.run_in_executor(self.thread_pool, functools.partial(self.safe_ytdl.extract_info, *args, **kwargs))

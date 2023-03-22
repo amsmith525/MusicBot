@@ -41,7 +41,7 @@ def paginate(content, *, length=DISCORD_MSG_CHAR_LIMIT, reserve=0):
     elif type(content) == list:
         contentlist = content
     else:
-        raise ValueError("Content must be str or list, not %s" % type(content))
+        raise ValueError(f"Content must be str or list, not {type(content)}")
 
     chunks = []
     currentchunk = ''
@@ -62,10 +62,7 @@ def paginate(content, *, length=DISCORD_MSG_CHAR_LIMIT, reserve=0):
 async def get_header(session, url, headerfield=None, *, timeout=5):
     req_timeout = aiohttp.ClientTimeout(total = timeout)
     async with session.head(url, timeout = req_timeout) as response:
-        if headerfield:
-            return response.headers.get(headerfield)
-        else:
-            return response.headers
+        return response.headers.get(headerfield) if headerfield else response.headers
 
 
 def md5sum(filename, limit=0):
@@ -120,24 +117,20 @@ def objdiff(obj1, obj2, *, access_attr=None, depth=0):
 
     for item in set(attrdir(obj1) + attrdir(obj2)):
         try:
-            iobj1 = getattr(obj1, item, AttributeError("No such attr " + item))
-            iobj2 = getattr(obj2, item, AttributeError("No such attr " + item))
+            iobj1 = getattr(obj1, item, AttributeError(f"No such attr {item}"))
+            iobj2 = getattr(obj2, item, AttributeError(f"No such attr {item}"))
 
             # log.everything("Checking {o1}.{attr} and {o2}.{attr}".format(attr=item, o1=repr(obj1), o2=repr(obj2)))
 
             if depth:
-                # log.everything("Inspecting level {}".format(depth))
-                idiff = objdiff(iobj1, iobj2, access_attr='auto', depth=depth - 1)
-                if idiff:
+                if idiff := objdiff(
+                    iobj1, iobj2, access_attr='auto', depth=depth - 1
+                ):
                     changes[item] = idiff
 
             elif iobj1 is not iobj2:
                 changes[item] = (iobj1, iobj2)
                 # log.everything("{1}.{0} ({3}) is not {2}.{0} ({4}) ".format(item, repr(obj1), repr(obj2), iobj1, iobj2))
-
-            else:
-                pass
-                # log.everything("{obj1}.{item} is {obj2}.{item} ({val1} and {val2})".format(obj1=obj1, obj2=obj2, item=item, val1=iobj1, val2=iobj2))
 
         except Exception as e:
             # log.everything("Error checking {o1}/{o2}.{item}".format(o1=obj1, o2=obj2, item=item), exc_info=e)

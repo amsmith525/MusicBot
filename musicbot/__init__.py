@@ -9,9 +9,7 @@ from .exceptions import HelpfulError
 
 class Yikes:
     def find_module(self, fullname, path=None):
-        if fullname == 'requests':
-            return self
-        return None
+        return self if fullname == 'requests' else None
 
     def _get_import_chain(self, *, until=None):
         stack = inspect.stack()[2:]
@@ -33,10 +31,7 @@ class Yikes:
             del stack
 
     def _format_import_chain(self, chain, *, message=None):
-        lines = []
-        for line in chain:
-            lines.append("In %s, line %s:\n    %s" % line)
-
+        lines = ["In %s, line %s:\n    %s" % line for line in chain]
         if message:
             lines.append(message)
 

@@ -27,6 +27,7 @@ Print the command beforehand just so they know whats happening
 When the script runs the user should be greeted with some text and a press [enter/whatever] to continue prompt
 '''
 
+
 from __future__ import print_function
 
 import os
@@ -71,16 +72,16 @@ MINIMUM_PY_VERSION = (3, 5)
 TARGET_PY_VERSION = "3.5.2"
 
 if SYS_PLATFORM not in PLATFORMS:
-    raise RuntimeError('Unsupported system "%s"' % SYS_PLATFORM)
+    raise RuntimeError(f'Unsupported system "{SYS_PLATFORM}"')
 
 if SYS_PLATFORM == 'linux2':
     SYS_PLATFORM = 'linux'
 
 TEMP_DIR = tempfile.TemporaryDirectory(prefix='musicbot-')
 try:
-    PY_BUILD_DIR = os.path.join(TEMP_DIR, "Python-%s" % TARGET_PY_VERSION)
+    PY_BUILD_DIR = os.path.join(TEMP_DIR, f"Python-{TARGET_PY_VERSION}")
 except TypeError:  # expected str, bytes or os.PathLike object, not TemporaryDirectory
-    PY_BUILD_DIR = os.path.join(TEMP_DIR.name, "Python-%s" % TARGET_PY_VERSION)
+    PY_BUILD_DIR = os.path.join(TEMP_DIR.name, f"Python-{TARGET_PY_VERSION}")
 
 INSTALL_DIR = args.dir if args.dir is not None else 'MusicBot'
 
@@ -93,10 +94,7 @@ if PY_VERSION >= (3,):
 
 def read_from_urllib(r):
     # Reads data from urllib in a version-independant way.
-    if PY_VERSION[0] == 2:
-        return r.read()
-    else:
-        return r.read().decode("utf-8")
+    return r.read() if PY_VERSION[0] == 2 else r.read().decode("utf-8")
 
 
 def sudo_check_output(args, **kwargs):
@@ -126,7 +124,7 @@ def find_library(libname):
 
 def yes_no(question):
     while True:  # spooky
-        ri = raw_input('{} (y/n): '.format(question))
+        ri = raw_input(f'{question} (y/n): ')
         if ri.lower() in ['yes', 'y']: return True
         elif ri.lower() in ['no', 'n']: return False
 
@@ -148,7 +146,7 @@ class SetupTask(object):
     def __getattribute__(self, item):
         try:
             # Check for platform variant of function first
-            return object.__getattribute__(self, item + '_' + SYS_PLATFORM)
+            return object.__getattribute__(self, f'{item}_{SYS_PLATFORM}')
         except:
             pass
 
@@ -233,9 +231,9 @@ class EnsurePython(SetupTask):
             try:
                 shutil.rmtree(PY_BUILD_DIR)
             except OSError:
-                sudo_check_call("rm -rf %s" % PY_BUILD_DIR)
+                sudo_check_call(f"rm -rf {PY_BUILD_DIR}")
 
-        subprocess.check_output("tar -xf {} -C {}".format(data, TEMP_DIR.name).split())
+        subprocess.check_output(f"tar -xf {data} -C {TEMP_DIR.name}".split())
 
         olddir = os.getcwd()
         # chdir into it
@@ -249,15 +247,15 @@ class EnsurePython(SetupTask):
         # Change back.
         os.chdir(olddir)
 
-        executable = "python{}".format(TARGET_PY_VERSION[0:3])
+        executable = f"python{TARGET_PY_VERSION[:3]}"
 
         self._restart(None)
 
         # TODO: Move to _restart
         # Restart into the new executable.
-        print("Rebooting into Python {}...".format(TARGET_PY_VERSION))
+        print(f"Rebooting into Python {TARGET_PY_VERSION}...")
         # Use os.execl to switch program
-        os.execl("/usr/local/bin/{}".format(executable), "{}".format(executable), __file__)
+        os.execl(f"/usr/local/bin/{executable}", f"{executable}", __file__)
 
     def download_darwin(self):
         pkg, _ = tmpdownload(self.PYTHON_PKG.format(ver=TARGET_PY_VERSION))
@@ -359,7 +357,7 @@ class EnsureGit(SetupTask):
                 '/SP-',
                 '/LOG',
                 '/SUPPRESSMSGBOXES',
-                '/LOADINF="%s"' % f.name
+                f'/LOADINF="{f.name}"',
             ]
             subprocess.check_call(args)
 
@@ -505,9 +503,9 @@ class EnsurePip(SetupTask):
         # Instead, we have to run get-pip.py.
         print("Installing pip...")
         try:
-            sudo_check_call(["python3.5", "{}".format(data)])
+            sudo_check_call(["python3.5", f"{data}"])
         except FileNotFoundError:
-            subprocess.check_call(["python3.5", "{}".format(data)])
+            subprocess.check_call(["python3.5", f"{data}"])
 
 
 class GitCloneMusicbot(SetupTask):
@@ -517,7 +515,7 @@ class GitCloneMusicbot(SetupTask):
     def download(self):
         print("Cloning files using Git...")
         if os.path.isdir(INSTALL_DIR):
-            r = yes_no('A folder called %s already exists here. Overwrite?' % INSTALL_DIR)
+            r = yes_no(f'A folder called {INSTALL_DIR} already exists here. Overwrite?')
             if r is False:
                 print('Exiting. Use the --dir parameter when running this script to specify a different folder.')
                 sys.exit(1)
@@ -571,9 +569,11 @@ class SetupMusicbot(SetupTask):
 
 def preface():
     print(" MusicBot Bootstrapper (v0.1) ".center(50, '#'))
-    print("This script will install the MusicBot into a folder called '%s' in your current directory." % INSTALL_DIR,
-          "\nDepending on your system and environment, several packages and dependencies will be installed.",
-          "\nTo ensure there are no issues, you should probably run this script as an administrator.")
+    print(
+        f"This script will install the MusicBot into a folder called '{INSTALL_DIR}' in your current directory.",
+        "\nDepending on your system and environment, several packages and dependencies will be installed.",
+        "\nTo ensure there are no issues, you should probably run this script as an administrator.",
+    )
     print()
     raw_input("Press enter to begin. ")
     print()
@@ -581,7 +581,9 @@ def preface():
 
 def main():
     preface()
-    print("Bootstrapping MusicBot on Python %s." % '.'.join(list(map(str, PY_VERSION))))
+    print(
+        f"Bootstrapping MusicBot on Python {'.'.join(list(map(str, PY_VERSION)))}."
+    )
 
     EnsurePython.run()
     EnsureBrew.run()
